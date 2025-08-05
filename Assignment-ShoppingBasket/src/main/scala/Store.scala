@@ -1,4 +1,4 @@
-import StoreItemRegistry.{Bread, Milk}
+import StoreItemRegistry.{ Apples, Bread, Soup }
 
 import java.time.LocalDate
 import java.util.Currency
@@ -14,8 +14,8 @@ object Store {
     Store(
       currency = Currency.getInstance("GBP"),
       promotions = List(
-        PercentageDiscount(Bread, 20.0, LocalDate.now().minusDays(5), LocalDate.now().plusDays(2)),
-        BuyXGetYDiscount(Bread, 2, Milk, 10.0),
+        PercentageDiscount(Apples, 10.0, LocalDate.now().minusDays(1), LocalDate.now().plusDays(5)),
+        BuyXGetYDiscount(Soup, 2, Bread, 50.0),
       ),
       storeItemRegistry = StoreItemRegistry.default,
     )

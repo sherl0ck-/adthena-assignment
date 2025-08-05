@@ -1,21 +1,20 @@
 import java.time.LocalDate
 
-case class ShoppingCart(items: Map[StoreItem, Int], store: Store) {
+case class ShoppingCart(
+  items: Map[StoreItem, Int],
+  store: Store,
+  shoppingDate: LocalDate = LocalDate.now(),
+) {
 
-  val shoppingDate = LocalDate.now()
+  def total: BigDecimal = items.map { case (item, qty) => item.price * qty }.sum
 
-  def total: BigDecimal = {
-    val total = items.map { case (item, qty) => item.price * qty }.sum
-    println(s"Subtotal: ${CurrencyFormatter.format(total)(store.currency)}")
-    total
-  }
+  def printPrice(priceName: String, price: BigDecimal): Unit =
+    println(s"$priceName: ${CurrencyFormatter.format(price)(store.currency)}")
 
-  def applyDiscounts: List[(BigDecimal, String)] =
+  private lazy val appliedDiscounts: List[(BigDecimal, String)] =
     store.promotions.filter(_.isValidOn(shoppingDate)).flatMap(_.apply(items))
 
-  def finalPrice: BigDecimal = {
-    val appliedDiscounts = applyDiscounts
-
+  def printDiscountsReceipt(): Unit = {
     if (appliedDiscounts.isEmpty) {
       println("(No offers available)")
     }
@@ -23,12 +22,11 @@ case class ShoppingCart(items: Map[StoreItem, Int], store: Store) {
     appliedDiscounts.foreach { case (amount, description) =>
       println(s"$description: ${CurrencyFormatter.format(amount)(store.currency)}")
     }
+  }
 
-    val totalDiscount      = appliedDiscounts.map(_._1).sum
-    val totalAfterDiscount = total - totalDiscount
-    println(s"Total price: ${CurrencyFormatter.format(totalAfterDiscount)(store.currency)}")
-
-    totalAfterDiscount
+  def finalPrice: BigDecimal = {
+    val totalDiscount = appliedDiscounts.map(_._1).sum
+    total - totalDiscount
   }
 }
 

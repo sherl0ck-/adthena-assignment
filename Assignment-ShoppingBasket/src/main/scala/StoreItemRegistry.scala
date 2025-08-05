@@ -1,5 +1,9 @@
 class StoreItemRegistry private (private val itemsByName: Map[String, StoreItem]) {
   def get(name: String): Option[StoreItem] = itemsByName.get(name.trim.capitalize)
+  def add(items: List[StoreItem]): StoreItemRegistry = {
+    val updatedItems = itemsByName ++ items.map(i => i.name -> i)
+    new StoreItemRegistry(updatedItems)
+  }
 }
 
 object StoreItemRegistry {
