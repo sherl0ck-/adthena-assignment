@@ -34,8 +34,12 @@ object ShoppingCart {
   def fromArgs(args: Array[String]): ShoppingCart =
     fromArgs(args, Store.default)
   def fromArgs(args: Array[String], store: Store): ShoppingCart = {
-    val itemCounts: Map[StoreItem, Int] = args
-      .flatMap(arg => StoreItemRegistry.default.get(arg))
+    val (valid, invalid) = args.partition(arg => store.storeItemRegistry.get(arg).isDefined)
+    if (invalid.nonEmpty)
+      println(s"Warning: unknown items ignored: ${invalid.mkString(", ")}")
+
+    val itemCounts: Map[StoreItem, Int] = valid
+      .flatMap(arg => store.storeItemRegistry.get(arg))
       .groupBy(identity)
       .view
       .mapValues(_.length)

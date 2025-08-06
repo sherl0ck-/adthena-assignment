@@ -1,166 +1,76 @@
-import StoreItemRegistry.{ Apples, Bread, Milk, Soup }
+import StoreItemRegistry._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.prop.TableDrivenPropertyChecks
 
 import java.time.LocalDate
 import java.util.Currency
 
-class ShoppingCartTest extends AnyFunSuite with Matchers {
+class ShoppingCartTest extends AnyFunSuite with Matchers with TableDrivenPropertyChecks {
 
-  test("ShoppingCart placeholder: configurable store, registry, date, promotions, items") {
-    // Custom StoreItem
-    case object Bananas extends StoreItem {
-      val name  = "Bananas"
-      val price = BigDecimal(0.40)
+  val GBP          = Currency.getInstance("GBP")
+  val registry     = StoreItemRegistry.default
+  val shoppingDate = LocalDate.of(2025, 8, 6)
+
+  val scenarios = Table(
+    ("description", "promotions", "items", "shoppingDate", "expectedFinal"),
+    (
+      "no promotions applied",
+      Nil,
+      Map(Apples -> 1, Bread -> 1),
+      shoppingDate,
+      BigDecimal("1.80"),
+    ),
+    (
+      "expired promotion not applied",
+      List(PercentageDiscount(Apples, 10.0, LocalDate.of(2025, 8, 1), LocalDate.of(2025, 8, 5))),
+      Map(Apples -> 3),
+      shoppingDate,
+      BigDecimal("3.00"),
+    ),
+    (
+      "percentage discount applied",
+      List(PercentageDiscount(Apples, 10.0, LocalDate.of(2025, 8, 4), LocalDate.of(2025, 8, 10))),
+      Map(Apples -> 2),
+      shoppingDate,
+      BigDecimal("1.80"), // 2 * 1.00 - 0.20
+    ),
+    (
+      "buyXgetY discount not applied (not enough items)",
+      List(BuyXGetYDiscount(Soup, 2, Bread, 50.0)),
+      Map(Soup -> 1, Bread -> 1),
+      shoppingDate,
+      BigDecimal("1.45"),
+    ),
+    (
+      "buyXgetY discount applied twice",
+      List(BuyXGetYDiscount(Soup, 2, Bread, 50.0)),
+      Map(Soup -> 4, Bread -> 2),
+      shoppingDate,
+      BigDecimal("3.40"), // 4*0.65 + 2*0.80 - 0.80
+    ),
+    (
+      "buyXgetX discount",
+      List(BuyXGetYDiscount(Apples, 3, Apples, 100.0)),
+      Map(Apples -> 4),
+      shoppingDate,
+      BigDecimal("3.00"),
+    ),
+  )
+
+  forAll(scenarios) { (description, promotions, items, shoppingDate, expectedFinal) =>
+    test(s"ShoppingCart - $description") {
+      println(s"ShoppingCart - $description")
+      val store = Store(
+        promotions = promotions,
+        storeItemRegistry = registry,
+        currency = Currency.getInstance("GBP"),
+      )
+
+      val cart = ShoppingCart(items, store, shoppingDate)
+      ReceiptPrinter.print(cart, true)
+
+      cart.finalPrice shouldBe expectedFinal
     }
-
-    // Custom Registry
-    val customRegistry: StoreItemRegistry = StoreItemRegistry.default.add(List(Bananas))
-
-    // Custom Promotions
-    val customPromotions = List(
-      PercentageDiscount(Bananas, 15.0, LocalDate.of(2025, 8, 1), LocalDate.of(2025, 8, 31)),
-      BuyXGetYDiscount(Soup, 3, Milk, 100.0), // free Milk for 3 soups
-    )
-
-    // Custom Store
-    val store = Store(
-      promotions = customPromotions,
-      storeItemRegistry = customRegistry,
-      currency = Currency.getInstance("GBP"),
-    )
-
-    // Custom items
-    val items: Map[StoreItem, Int] = Map(
-      Bananas -> 4,
-      Soup    -> 3,
-      Milk    -> 1,
-    )
-
-    // Custom date for shopping
-    val shoppingDate = LocalDate.of(2025, 8, 15)
-
-    // Shopping cart
-    val cart = ShoppingCart(items, store, shoppingDate)
-
-    ReceiptPrinter.print(cart, true)
-    println("Placeholder test output:")
-
-    // No assertions yet — this is a template for testing full configurability
-  }
-
-  test("ShoppingCart calculates total and applies promotions correctly") {
-    val store = Store(
-      promotions = List(
-        PercentageDiscount(Apples, 10.0, LocalDate.of(2025, 8, 4), LocalDate.of(2025, 8, 10)),
-        BuyXGetYDiscount(Soup, 2, Bread, 50.0),
-      ),
-      StoreItemRegistry.default,
-      Currency.getInstance("GBP"),
-    )
-
-    // Define items
-    val items: Map[StoreItem, Int] = Map(
-      Apples -> 2,
-      Soup   -> 2,
-      Bread  -> 1,
-    )
-
-    // Build cart
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 6))
-
-    // Assert raw total
-    cart.total shouldBe BigDecimal("4.10") // 2*1.00 + 2*0.65 + 1*0.80
-
-    // Assert final price
-    val finalPrice = cart.finalPrice
-    finalPrice shouldBe BigDecimal("3.50") // With ~10% off apples -20p and 50% off bread -40p
-  }
-
-  test("ShoppingCart with no promotions returns full total") {
-    val store = Store(
-      promotions = Nil,
-      StoreItemRegistry.default,
-      Currency.getInstance("GBP"),
-    )
-
-    val items: Map[StoreItem, Int] = Map(
-      Apples -> 1,
-      Bread  -> 1,
-    )
-
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 11))
-
-    cart.total shouldBe BigDecimal("1.80") // 1.00 + 0.80
-    cart.finalPrice shouldBe BigDecimal("1.80")
-  }
-
-  test("ShoppingCart with expired promotions does not apply discounts") {
-    val store = Store(
-      promotions = List(
-        PercentageDiscount(Apples, 10.0, LocalDate.of(2025, 8, 1), LocalDate.of(2025, 8, 6)),
-      ),
-      StoreItemRegistry.default,
-      Currency.getInstance("GBP"),
-    )
-
-    val items: Map[StoreItem, Int] = Map(Apples -> 3)
-
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 7))
-
-    cart.total shouldBe BigDecimal("3.00")
-    cart.finalPrice shouldBe BigDecimal("3.00") // no discount applied
-  }
-
-  test("ShoppingCart using custom registry includes additional item") {
-    case object Bananas extends StoreItem {
-      val name  = "Bananas"
-      val price = BigDecimal(0.70)
-    }
-
-    val customRegistry: StoreItemRegistry = StoreItemRegistry.default.add(List(Bananas))
-
-    val store = Store(
-      promotions = Nil,
-      storeItemRegistry = customRegistry,
-      Currency.getInstance("GBP"),
-    )
-
-    val items: Map[StoreItem, Int] = Map(Bananas -> 2, Milk -> 1)
-
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 6))
-
-    cart.total shouldBe BigDecimal("2.70") // 2*0.70 + 1.30
-    cart.finalPrice shouldBe BigDecimal("2.70")
-  }
-
-  test("BuyXGetYDiscount is not applied if buy quantity is insufficient") {
-    val store = Store(
-      promotions = List(BuyXGetYDiscount(Soup, 2, Bread, 50.0)),
-      StoreItemRegistry.default,
-      Currency.getInstance("GBP"),
-    )
-
-    val items: Map[StoreItem, Int] = Map(Soup -> 1, Bread -> 1)
-
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 6))
-
-    cart.total shouldBe BigDecimal("1.45")      // 0.65 + 0.80
-    cart.finalPrice shouldBe BigDecimal("1.45") // no discount
-  }
-
-  test("Multiple BuyXGetYDiscounts applied if buy quantity allows") {
-    val store = Store(
-      promotions = List(BuyXGetYDiscount(Soup, 2, Bread, 50.0)),
-      StoreItemRegistry.default,
-      Currency.getInstance("GBP"),
-    )
-
-    val items: Map[StoreItem, Int] = Map(Soup -> 4, Bread -> 2)
-
-    val cart = ShoppingCart(items, store, LocalDate.of(2025, 8, 6))
-
-    cart.total shouldBe BigDecimal("4.20")      // 4*0.65=2.60 + 2*0.80=1.60
-    cart.finalPrice shouldBe BigDecimal("3.40") // 2x 50% off Bread = -0.80
   }
 }

@@ -1,4 +1,1 @@
-trait StoreItem {
-  def name: String
-  def price: BigDecimal
-}
+case class StoreItem(name: String, price: BigDecimal)
