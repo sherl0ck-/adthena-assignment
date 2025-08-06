@@ -11,5 +11,4 @@ Standard sbt installation (I'm using 1.11.3) through brew/apt or universally thr
 or ```./PriceBasket Apples Milk Bread``` (might require you to do ```chmod +x PriceBasket```) will output as expected. Note that currency might show as e.g. GBP or £ depending on the system's locale 
 
 ### Adding a new test case
-You can add a new row in scenarios within ShoppingCartTest. 
-Currently, there isn't a way to bulk import test.
+You can add a new row in scenarios within ShoppingCartTest. If you want to run tests from command line, you will need to customize the setup in PriceBasket.scala. 
