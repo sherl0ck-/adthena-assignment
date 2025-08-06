@@ -4,7 +4,7 @@ Scala repo to price a basket of goods taking into account some special offers
 Standard sbt installation (I'm using 1.11.3) through brew/apt or universally through Coursier
 
 ### Compile and run tests
-```sbt assembly && sbt test``` from the terminal or ```compile``` followed by ```test``` in IntelliJ or similar. 
+```sbt assembly && sbt test``` from the inside of Assignment-ShoppingBasket folder or ```compile``` followed by ```test``` in IntelliJ or similar. 
 
 ### Running from command line
 ```sbt "run Apples Milk Bread"``` 

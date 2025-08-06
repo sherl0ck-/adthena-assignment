@@ -53,5 +53,6 @@ case class BuyXGetYDiscount(
 
   }
 
-  def description: String = s"Buy $buyQuantity $buyItem, get $getItem at $discountPercentage% off"
+  def description: String =
+    s"Buy $buyQuantity ${buyItem.name}, get ${getItem.name} at $discountPercentage% off"
 }
